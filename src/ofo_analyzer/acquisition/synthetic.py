@@ -56,7 +56,10 @@ class SineSource(AudioSource):
             sample_rate=self.sample_rate,
             channels=self.channels,
             source_kind="synthetic",
-            instrument=f"SineSource({self.frequency:g} Hz, amplitude {self.amplitude:g} FS, noise_std {self.noise_std:g})",
+            instrument=(
+                f"SineSource({self.frequency:g} Hz, amplitude {self.amplitude:g} FS, "
+                f"noise_std {self.noise_std:g})"
+            ),
             site_notes="Deterministic synthetic signal; not a physical measurement.",
         )
 

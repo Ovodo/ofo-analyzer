@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ofo_analyzer.dsp.windows import coherent_gain, enbw, window, window_energy
+from ofo_analyzer.dsp.windows import enbw, window, window_energy
 
 DEFAULT_WINDOW = "hann"
 

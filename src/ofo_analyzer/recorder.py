@@ -27,7 +27,13 @@ DEFAULT_SUBTYPE = "PCM_16"
 class LiveRecorder:
     """Record from an :class:`AudioSource` into WAV + sidecar."""
 
-    def __init__(self, source: AudioSource, out_dir: str | Path, base_name: str | None = None, subtype: str = DEFAULT_SUBTYPE) -> None:
+    def __init__(
+        self,
+        source: AudioSource,
+        out_dir: str | Path,
+        base_name: str | None = None,
+        subtype: str = DEFAULT_SUBTYPE,
+    ) -> None:
         self.source = source
         self.out_dir = Path(out_dir)
         self.base_name = base_name or source.session_id

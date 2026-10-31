@@ -31,7 +31,11 @@ class WavWriter:
         self.frames = 0
         self.clipped_blocks = 0
         self._handle = sf.SoundFile(
-            str(self.path), mode="w", samplerate=int(self.sample_rate), channels=self.channels, subtype=subtype
+            str(self.path),
+            mode="w",
+            samplerate=int(self.sample_rate),
+            channels=self.channels,
+            subtype=subtype,
         )
 
     def write(self, block: SampleBlock) -> None:

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-
 FS = 48_000.0
 
 

@@ -37,7 +37,10 @@ def to_dbfs(level: float) -> float:
 
 def clipping(data: np.ndarray, threshold: float = CLIP_THRESHOLD) -> bool:
     """True when any sample reaches or exceeds digital full scale."""
-    return bool(np.max(np.abs(np.asarray(data, dtype=np.float64))) >= threshold) if np.asarray(data).size else False
+    x = np.asarray(data)
+    if x.size == 0:
+        return False
+    return bool(np.max(np.abs(x)) >= threshold)
 
 
 class LevelMeter:

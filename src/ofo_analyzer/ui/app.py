@@ -299,7 +299,8 @@ if QT_AVAILABLE:
                 self._samples_seen += block.n_samples
                 self.meter.update(mono, self.source.sample_rate)
                 self._clip_active = self._clip_active or block.clipped
-                self._wave = np.concatenate((self._wave, mono))[-int(WAVEFORM_SECONDS * self.source.sample_rate) :]
+                keep = int(WAVEFORM_SECONDS * self.source.sample_rate)
+                self._wave = np.concatenate((self._wave, mono))[-keep:]
             self.update_plots()
             self.update_meter()
             self.update_status_line()
@@ -334,7 +335,9 @@ if QT_AVAILABLE:
             self.peak_label.setText("peak —" if peak_db == float("-inf") else f"peak {peak_db:.1f}")
             self.rms_label.setText("rms —" if rms_db == float("-inf") else f"rms {rms_db:.1f}")
             if self._clip_active:
-                self.clip_label.setStyleSheet("color:#ff6b5e;border:1px solid #ff6b5e;padding:4px 10px;font-weight:700;")
+                self.clip_label.setStyleSheet(
+                    "color:#ff6b5e;border:1px solid #ff6b5e;padding:4px 10px;font-weight:700;"
+                )
             else:
                 self.clip_label.setStyleSheet("color:#577079;border:1px solid #314247;padding:4px 10px;")
 

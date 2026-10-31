@@ -71,7 +71,9 @@ class SessionMetadata:
     calibration_id: str | None = None
     calibration_date_utc: datetime | None = None
     clock_source: str = "host audio callback clock"
-    clock_uncertainty_note: str = "USB audio clocks drift; UTC labels are start-time annotations, not synchronization"
+    clock_uncertainty_note: str = (
+        "USB audio clocks drift; UTC labels are start-time annotations, not synchronization"
+    )
     site_notes: str = ""
     software_version: str = __version__
     schema_version: int = SCHEMA_VERSION
@@ -90,7 +92,9 @@ class SessionMetadata:
             "instrument": self.instrument,
             "gain_setting": self.gain_setting,
             "calibration_id": self.calibration_id,
-            "calibration_date_utc": self.calibration_date_utc.isoformat() if self.calibration_date_utc else None,
+            "calibration_date_utc": (
+                self.calibration_date_utc.isoformat() if self.calibration_date_utc else None
+            ),
             "clock_source": self.clock_source,
             "clock_uncertainty_note": self.clock_uncertainty_note,
             "site_notes": self.site_notes,

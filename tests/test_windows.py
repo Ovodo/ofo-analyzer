@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pytest
 
 from ofo_analyzer.dsp.windows import coherent_gain, enbw, window, window_energy
