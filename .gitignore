@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Environments
+.venv/
+venv/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+
+# Recordings and derived data (never commit raw measurements by default)
+recordings/
+examples/output/
+*.wav
+*.json.tmp
+
+# OS
+.DS_Store
