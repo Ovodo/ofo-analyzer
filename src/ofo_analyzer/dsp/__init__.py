@@ -13,20 +13,26 @@ Normalization rules (verified in tests):
   power, so this package reports the physical bin spacing of the data.
 """
 
+from ofo_analyzer.dsp.export import export_spectrogram_csv, export_spectrum_csv
 from ofo_analyzer.dsp.level import LevelMeter, clipping, peak, rms, to_dbfs
+from ofo_analyzer.dsp.spectrogram import StreamingSpectrogram, spectrogram
 from ofo_analyzer.dsp.spectrum import SpectrumResult, amplitude_spectrum, bin_spacing, psd
 from ofo_analyzer.dsp.windows import coherent_gain, window, window_energy
 
 __all__ = [
     "LevelMeter",
     "SpectrumResult",
+    "StreamingSpectrogram",
     "amplitude_spectrum",
     "bin_spacing",
     "clipping",
     "coherent_gain",
+    "export_spectrogram_csv",
+    "export_spectrum_csv",
     "psd",
     "peak",
     "rms",
+    "spectrogram",
     "to_dbfs",
     "window",
     "window_energy",

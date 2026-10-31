@@ -25,6 +25,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Report levels and spectrum peak of a WAV file.")
     parser.add_argument("wav", type=Path)
     parser.add_argument("--n-fft", type=int, default=4096)
+    parser.add_argument(
+        "--csv",
+        type=Path,
+        default=None,
+        help="also export the spectrum (and, with --spectrogram, the full spectrogram) to CSV",
+    )
+    parser.add_argument("--spectrogram", action="store_true", help="compute and export a full spectrogram")
     args = parser.parse_args()
 
     path: Path = args.wav
@@ -65,6 +72,23 @@ def main() -> int:
         print(f"sidecar:         {sidecar.name} · source={source} · drops={drops} overflow={overflow}")
     else:
         print("sidecar:         (none found; provenance unknown)")
+
+    if args.csv or args.spectrogram:
+        from datetime import UTC, datetime
+
+        from ofo_analyzer.dsp.export import export_spectrogram_csv, export_spectrum_csv
+
+        stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        if args.csv:
+            out = export_spectrum_csv(spectrum, args.csv, stamp)
+            print(f"exported:        spectrum -> {out}")
+        if args.spectrogram:
+            from ofo_analyzer.dsp.spectrogram import spectrogram as compute_spectrogram
+
+            spec = compute_spectrogram(mono, rate, n_fft=args.n_fft)
+            target = (args.csv or path).with_suffix(".spectrogram.csv")
+            out = export_spectrogram_csv(spec, target, stamp)
+            print(f"exported:        spectrogram ({spec.values_db.shape[0]} frames) -> {out}")
     return 0
 
 

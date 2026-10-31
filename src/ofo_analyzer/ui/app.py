@@ -19,7 +19,7 @@ import numpy as np
 
 try:  # Qt/pyqtgraph are optional [ui] extras; core and tests run without them
     import pyqtgraph as pg
-    from PySide6.QtCore import QTimer
+    from PySide6.QtCore import QRectF, QTimer
     from PySide6.QtWidgets import (
         QApplication,
         QCheckBox,
@@ -41,6 +41,7 @@ except ImportError:  # pragma: no cover - exercised on bare installs
 from ofo_analyzer import __version__
 from ofo_analyzer.acquisition.device import LiveSource
 from ofo_analyzer.dsp.level import LevelMeter
+from ofo_analyzer.dsp.spectrogram import StreamingSpectrogram
 from ofo_analyzer.dsp.spectrum import psd
 from ofo_analyzer.recorder import LiveRecorder
 
@@ -49,6 +50,8 @@ FFT_SIZES = (2048, 4096, 8192, 16384)
 METER_FLOOR_DB = -60.0
 WAVEFORM_SECONDS = 2.0
 PLOT_POINTS = 2000
+SPEC_MAX_COLUMNS = 256  # displayed spectrogram history
+SPEC_LEVELS = (-130.0, -20.0)  # dB FS^2/Hz display range
 
 
 def main() -> int:
@@ -78,6 +81,9 @@ if QT_AVAILABLE:
             self._wave = np.zeros(0)
             self._samples_seen = 0
             self._clip_active = False
+            self._spec_feed: StreamingSpectrogram | None = None
+            self._spec_cols: list[np.ndarray] = []
+            self._spec_times: list[float] = []
 
             central = QWidget()
             layout = QVBoxLayout(central)
@@ -134,7 +140,20 @@ if QT_AVAILABLE:
             plots = QHBoxLayout()
             plots.addWidget(self.wave_plot, stretch=1)
             plots.addWidget(self.spectrum_plot, stretch=1)
-            layout.addLayout(plots, stretch=1)
+            layout.addLayout(plots, stretch=2)
+
+            # --- rolling spectrogram -----------------------------------------
+            self.spec_plot = pg.PlotWidget(title="Rolling spectrogram (dB FS²/Hz, display only)")
+            self.spec_plot.setLabel("bottom", "Time", units="s")
+            self.spec_plot.setLabel("left", "Frequency", units="Hz")
+            self.spec_image = pg.ImageItem(axisOrder="col-major")
+            self.spec_image.setLevels(SPEC_LEVELS)
+            try:
+                self.spec_image.setLookupTable(pg.colormap.get("viridis").getLookupTable(nPts=256))
+            except Exception:  # colormap support varies across pyqtgraph versions
+                pass
+            self.spec_plot.addItem(self.spec_image)
+            layout.addWidget(self.spec_plot, stretch=2)
 
             # --- meter row ----------------------------------------------------
             meter_row = QHBoxLayout()
@@ -177,6 +196,7 @@ if QT_AVAILABLE:
             self.timer.setInterval(33)  # ~30 fps display cadence
             self.timer.timeout.connect(self.drain_and_draw)
 
+            self.fft_combo.currentIndexChanged.connect(self.on_fft_changed)
             self.refresh_devices()
 
         # -- device management ------------------------------------------------
@@ -226,6 +246,11 @@ if QT_AVAILABLE:
             self._wave = np.zeros(0)
             self._samples_seen = 0
             self._clip_active = False
+            self._spec_feed = StreamingSpectrogram(
+                self.source.sample_rate, n_fft=self.fft_combo.currentData()
+            )
+            self._spec_cols = []
+            self._spec_times = []
             self.start_button.setText("■ Stop")
             self.record_check.setEnabled(True)
             self.device_combo.setEnabled(False)
@@ -301,25 +326,52 @@ if QT_AVAILABLE:
                 self._clip_active = self._clip_active or block.clipped
                 keep = int(WAVEFORM_SECONDS * self.source.sample_rate)
                 self._wave = np.concatenate((self._wave, mono))[-keep:]
+                if self._spec_feed is not None:
+                    for frame_time, values_db in self._spec_feed.feed(mono):
+                        self._spec_cols.append(values_db)
+                        self._spec_times.append(frame_time)
+                    if len(self._spec_cols) > SPEC_MAX_COLUMNS:
+                        drop = len(self._spec_cols) - SPEC_MAX_COLUMNS
+                        self._spec_cols = self._spec_cols[drop:]
+                        self._spec_times = self._spec_times[drop:]
             self.update_plots()
             self.update_meter()
             self.update_status_line()
 
-        def update_plots(self) -> None:
-            if self._wave.size == 0:
+        def on_fft_changed(self) -> None:
+            """Reset the spectrogram feed on a parameter change, keeping the clock."""
+            if self._spec_feed is None:
                 return
-            # Waveform, decimated for display only.
-            step = max(1, self._wave.size // PLOT_POINTS)
-            shown = self._wave[::step]
-            t = np.arange(shown.size) * step / self.source.sample_rate
-            self.wave_curve.setData(t, shown)
-            # Spectrum from the most recent n_fft samples.
-            n_fft = self.fft_combo.currentData()
-            if self._wave.size >= n_fft:
-                result = psd(self._wave[-n_fft:], self.source.sample_rate, n_fft=n_fft)
-                mask = result.frequencies >= 20.0  # display band; device limits may differ
-                db = 10.0 * np.log10(np.maximum(result.values[mask], 1e-20))
-                self.spectrum_curve.setData(result.frequencies[mask], db)
+            consumed = self._spec_feed.consumed
+            self._spec_feed = StreamingSpectrogram(
+                self._spec_feed.sample_rate, n_fft=self.fft_combo.currentData()
+            )
+            self._spec_feed.set_clock(consumed)
+            self._spec_cols = []
+            self._spec_times = []
+
+        def update_plots(self) -> None:
+            if self._wave.size:
+                # Waveform, decimated for display only.
+                step = max(1, self._wave.size // PLOT_POINTS)
+                shown = self._wave[::step]
+                t = np.arange(shown.size) * step / self.source.sample_rate
+                self.wave_curve.setData(t, shown)
+                # Spectrum from the most recent n_fft samples.
+                n_fft = self.fft_combo.currentData()
+                if self._wave.size >= n_fft:
+                    result = psd(self._wave[-n_fft:], self.source.sample_rate, n_fft=n_fft)
+                    mask = result.frequencies >= 20.0  # display band; device limits may differ
+                    db = 10.0 * np.log10(np.maximum(result.values[mask], 1e-20))
+                    self.spectrum_curve.setData(result.frequencies[mask], db)
+            # Rolling spectrogram: columns are (bins); rows are display frames.
+            if self._spec_cols and self._spec_feed is not None:
+                image = np.stack(self._spec_cols, axis=0)  # (frames, bins)
+                self.spec_image.setImage(image, autoLevels=False)
+                t0 = self._spec_times[0]
+                span = max(1e-3, (self._spec_times[-1] - t0) + self._spec_feed.hop / self.source.sample_rate)
+                self.spec_image.setRect(QRectF(t0, 0.0, span, self.source.sample_rate / 2.0))
+                self.spec_plot.setLimits(xMin=t0)
 
         def update_meter(self) -> None:
             def bar_value(db: float) -> int:

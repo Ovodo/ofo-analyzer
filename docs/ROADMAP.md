@@ -31,13 +31,20 @@ warning, recording.
   (`sudo apt install libportaudio2` on Ubuntu) and a connected input
   (e.g. the UMC22). Hardware tests skip gracefully when absent.
 
-## Stage 3 — Analysis interface (next)
+## Stage 3 — Analysis interface (in progress, 2026-10-31)
 
-Spectrogram (rolling), configurable FFT/window controls persisted to
-sidecars, WAV→CSV export of spectra, session replay for review.
+Spectrogram (rolling), configurable FFT/window controls, CSV export of
+spectra, session replay for review.
 
-Completion check: controls update correctly; plotting stays responsive
-during a 10-minute recording; a dropped device produces a visible error.
+- Rolling spectrogram in the UI, sample-accurate frame times from a
+  streaming STFT (clock preserved across FFT-size changes) ✓
+- CSV exports with provenance headers (spectrum + long-format
+  spectrogram), via `analyze_wav.py --csv/--spectrogram` ✓
+- Batch spectrogram verified against the streaming feed frame-for-frame ✓
+
+Completion check (remaining): window/overlap controls persisted to
+sidecars; plotting stays responsive during a 10-minute live recording; a
+dropped device produces a visible error.
 
 ## Stage 4 — Recording and replay robustness
 
