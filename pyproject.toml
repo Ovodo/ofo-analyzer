@@ -36,6 +36,12 @@ packages = ["src/ofo_analyzer"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+filterwarnings = [
+  # sounddevice 0.5.6 internally sets `data.shape = -1, channels` in its
+  # PortAudio callback machinery, deprecated in NumPy 2.5. Upstream issue,
+  # harmless to data integrity; remove this filter when sounddevice fixes it.
+  "ignore:Setting the shape on a NumPy array:DeprecationWarning",
+]
 
 [tool.ruff]
 line-length = 110
