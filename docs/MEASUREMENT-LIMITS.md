@@ -22,6 +22,18 @@ the tool, not a disclaimer bolted on afterwards.
   interpolates but does not add resolving power; the tool reports the
   physical bin spacing of the data.
 - A sample-rate limit is not a guarantee of usable sensor bandwidth.
+- **Do not silently adopt a device's default sample rate, and size capture
+  buffers for sustained loads.** Measured evidence (2026-11-01, Behringer
+  UMC22 / PCM2902, direct ALSA): at its 44.1 kHz device default,
+  PortAudio delivered only ~33% of expected frames with chronic
+  input-overflow flags; the identical setup at 48 kHz delivered ~99.8% in
+  short captures. Over a sustained 120 s window on a busy desktop, a
+  2048-sample blocksize still lost ~3% of frames to 41 scheduling
+  overflows; blocksize 8192 sustained 99.84% with one start-up overflow.
+  The analyzer therefore defaults to 48 kHz, blocksize 8192, and always
+  records the actual rate and overflow counters in the sidecar. Verify
+  delivered-frame counts against wall-clock duration for every capture
+  chain before trusting it.
 
 ## Acquisition integrity
 

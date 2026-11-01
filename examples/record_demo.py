@@ -50,10 +50,45 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Record a short OFO demo capture.")
     parser.add_argument("--seconds", type=float, default=10.0)
     parser.add_argument("--channels", type=int, default=1)
-    parser.add_argument("--rate", type=float, default=None, help="sample rate (Hz); default 48000")
+    parser.add_argument(
+        "--rate",
+        type=float,
+        default=48_000,
+        help="sample rate (Hz); default 48000 (the device default is NOT adopted; "
+        "44.1 kHz via direct ALSA overflowed chronically on the UMC22)",
+    )
+    parser.add_argument(
+        "--device",
+        type=int,
+        default=None,
+        help="PortAudio device index (see 'LiveSource.list_input_devices()'); default: system default input",
+    )
     parser.add_argument("--synthetic", action="store_true", help="force the synthetic fallback tone")
     parser.add_argument("--out", default="recordings", help="output directory")
     args = parser.parse_args()
+
+    if not args.synthetic and args.device is not None:
+        try:
+            from ofo_analyzer.acquisition.device import LiveSource
+
+            source = LiveSource(device=args.device, channels=args.channels, sample_rate=args.rate)
+            print(f"Live device: [{source.device_index}] {source.device_name} "
+                  f"@ {source.sample_rate:g} Hz")
+        except AcquisitionError as exc:
+            print(f"cannot open device {args.device}: {exc}", file=sys.stderr)
+            return 1
+        seconds = args.seconds
+        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        recorder = LiveRecorder(source, Path(args.out), base_name=f"live-{stamp}")
+        print(f"Recording {seconds:g} s to {recorder.wav_path} ...")
+        recorder.start()
+        try:
+            import time
+
+            time.sleep(seconds)
+        finally:
+            recorder.stop(timeout=10)
+        return _report(recorder)
 
     source = build_source(args.seconds, args.synthetic, args.channels, args.rate)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -72,7 +107,10 @@ def main() -> int:
         # Synthetic/WAV sources terminate on their own.
         recorder.start()
         recorder.stop(timeout=30)
+    return _report(recorder)
 
+
+def _report(recorder: LiveRecorder) -> int:
     if recorder.error is not None:
         print(f"recording failed: {recorder.error}", file=sys.stderr)
         return 1

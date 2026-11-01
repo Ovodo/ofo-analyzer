@@ -30,7 +30,7 @@ class LiveSource(AudioSource):
         device: int | None = None,
         channels: int = 1,
         sample_rate: float | None = None,
-        block_size: int = 2048,
+        block_size: int = 8192,
         queue_blocks: int = 64,
     ) -> None:
         try:
@@ -43,8 +43,20 @@ class LiveSource(AudioSource):
         self._sd = sd
         self.device_index = device
         self.channels = channels
-        self.block_size = block_size
+        # Default to 48 kHz per the OFO plan ("Default to 48 kHz when
+        # supported"). Some USB codecs chronically overflow through direct
+        # ALSA at their 44.1 kHz device default (observed on the PCM2902 in
+        # the Behringer UMC22, 2026-11-01: ~33% delivered frames with
+        # constant input overflow); 48 kHz paces cleanly. Users may still
+        # select 44.1 kHz explicitly.
         self.sample_rate = float(sample_rate) if sample_rate is not None else 48_000.0
+        # Default blocksize 8192 (~171 ms at 48 kHz): measured 2026-11-01 on
+        # the UMC22 direct-ALSA path, 2048 produced 41 input overflows in a
+        # 120 s capture (3% frame loss on a busy desktop); 8192 delivered
+        # 99.84% with one start-up overflow. PortAudio's documented remedy
+        # for overflows is a larger blocksize/latency; measurement integrity
+        # outweighs display cadence for this instrument.
+        self.block_size = block_size
         self.queue = BlockQueue(max_blocks=queue_blocks)
         self.session_id = f"live-{uuid.uuid4().hex[:8]}"
         self._stream: sd.InputStream | None = None
@@ -104,8 +116,9 @@ class LiveSource(AudioSource):
             )
         self.device_index = int(device)
         self.device_name = str(info.get("name", "?"))
-        if sample_rate is None:
-            self.sample_rate = float(info.get("default_samplerate", 48_000.0))
+        # When the caller did not choose a rate, keep the 48 kHz default
+        # (see __init__); adopting the device's own default (often 44.1 kHz)
+        # is avoided deliberately based on the overflow findings above.
 
     # -- acquisition -------------------------------------------------------
 

@@ -50,6 +50,10 @@ uv run python examples/record_demo.py --seconds 10
 uv run python examples/analyze_wav.py recordings/demo.wav
 ```
 
+See `docs/DEMO.md` for the full reviewer reproduction sequence (install,
+tests, synthetic pipeline check, live capture) and the validation/test
+reports that ship with each release.
+
 Run the test suite:
 
 ```bash

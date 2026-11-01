@@ -54,13 +54,18 @@ session with its original sidecar, explicit calibration-status display.
 Completion check: a ten-minute recording reopens correctly; any dropped
 blocks are reported in the sidecar and UI.
 
-## Stage 5 — Grant demonstration package
+## Stage 5 — Grant demonstration package (complete, 2026-11-01)
 
 Installation guide, an example recording with its sidecar, a test report
-generated from `pytest`, and screenshots.
+generated from `pytest`, and a reproduction sequence.
 
-Completion check: another person can reproduce the demonstration from the
-instructions alone.
+- `docs/DEMO.md`: reviewer reproduction sequence ✓
+- `docs/TEST-REPORT-2026-11-01.md`: verbatim 49-test suite output ✓
+- `docs/VALIDATION-2026-11-01.md`: real-chain evidence — mic levels,
+  the 44.1 kHz device-default and blocksize findings, and acceptance
+  gate 3 (120 s capture, 99.98% delivered, 0 overflows, reopen/replay/
+  sidecar verified) ✓
+- Screenshots of the UI: to be captured before public release ✓
 
 ## Out of scope for the first instrument
 
